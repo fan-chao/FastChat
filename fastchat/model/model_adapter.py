@@ -180,6 +180,13 @@ def load_model(
     elif device == "cuda":
         kwargs = {"torch_dtype": torch.float16}
         if num_gpus != 1:
+            gpu_ids = []
+            gpu_ids_str = os.environ.get('CUDA_VISIBLE_DEVICES')
+            if len(gpu_ids_str) == 0:
+                gpu_ids = [i for i in range(num_gpus)]
+            else:
+                gpu_ids = [int(i) for i in gpu_ids_str.split(',')]
+
             kwargs["device_map"] = "auto"
             if max_gpu_memory is None:
                 kwargs[
@@ -187,11 +194,12 @@ def load_model(
                 ] = "sequential"  # This is important for not the same VRAM sizes
                 available_gpu_memory = get_gpu_memory(num_gpus)
                 kwargs["max_memory"] = {
-                    i: str(int(available_gpu_memory[i] * 0.85)) + "GiB"
-                    for i in range(num_gpus)
+                    gpu_id: str(int(available_gpu_memory[i] * 0.85)) + "GiB"
+                    for i, gpu_id in enumerate(gpu_ids)
                 }
             else:
-                kwargs["max_memory"] = {i: max_gpu_memory for i in range(num_gpus)}
+                kwargs["device_map"] = "sequential"
+                kwargs["max_memory"] = {i: max_gpu_memory for i in gpu_ids}
     elif device == "mps":
         kwargs = {"torch_dtype": torch.float16}
         # Avoid bugs in mps backend by not using in-place operations.

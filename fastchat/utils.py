@@ -130,7 +130,14 @@ def get_gpu_memory(max_gpus=None):
         else min(max_gpus, torch.cuda.device_count())
     )
 
-    for gpu_id in range(num_gpus):
+    gpu_ids = []
+    gpu_ids_str = os.environ.get('CUDA_VISIBLE_DEVICES')
+    if len(gpu_ids_str) == 0:
+        gpu_ids = [i for i in range(num_gpus)]
+    else:
+        gpu_ids = [int(i) for i in gpu_ids_str.split(',')]
+
+    for gpu_id in gpu_ids:
         with torch.cuda.device(gpu_id):
             device = torch.cuda.current_device()
             gpu_properties = torch.cuda.get_device_properties(device)
